@@ -1,40 +1,55 @@
-import { Flags } from '@oclif/core';
-import { TestCommand } from '@configu/node';
-import { BaseCommand } from '../base';
+import { Command, Option } from 'clipanion';
+import { ConfigSchema, ConfigSet, UpsertCommand } from '@configu/sdk';
+import { BaseCommand } from './base';
 
-export default class Test extends BaseCommand<typeof Test> {
-  static description = `Verify credentials and write access to a \`ConfigStore\``;
+export class TestCommand extends BaseCommand {
+  static override paths = [['test']];
 
-  static examples = [
-    {
-      description: `Test connection to a 'configu' \`ConfigStore\``,
-      command: `<%= config.bin %> <%= command.id %> --store 'configu'`,
-    },
-    {
-      description: `Test connection to a 'configu' \`ConfigStore\` and clean afterwards`,
-      command: `<%= config.bin %> <%= command.id %> --store 'configu' --clean`,
-    },
-  ];
+  static override usage = Command.Usage({
+    description: `Test connection to a \`ConfigStore\``,
+  });
 
-  static flags = {
-    store: Flags.string({
-      description: `\`ConfigStore\` (configs data-source) to upsert \`CONFIGU_TEST\` config to`,
-      aliases: ['st'],
-    }),
-    clean: Flags.boolean({
-      description: `Delete \`CONFIGU_TEST\` config from the \`ConfigStore\` after test completed`,
-      default: false,
-    }),
-  };
+  store = Option.String('--store,--st', {
+    description: `\`ConfigStore\` (configs data-source) to fetch \`Configs\` from`,
+    required: true,
+  });
 
-  public async run(): Promise<void> {
-    const store = this.getStoreInstanceByStoreFlag(this.flags.store);
+  clean = Option.Boolean('--clean', {
+    description: `Delete \`CONFIGU_TEST\` config from the \`ConfigStore\` after test completed`,
+  });
+
+  async execute() {
+    await this.init();
+    const store = this.getStoreInstanceByStoreFlag(this.store);
+    const set = new ConfigSet();
+    const schema = new ConfigSchema({
+      CONFIGU_TEST: {},
+    });
 
     try {
-      await new TestCommand({ store, clean: this.flags.clean }).run();
-      this.print(`Test passed for store ${this.flags.store} of type ${store.type}`, { symbol: 'success' });
+      await new UpsertCommand({
+        store,
+        set,
+        schema,
+        configs: {
+          CONFIGU_TEST: Date.now().toString(),
+        },
+      }).run();
+
+      if (this.clean) {
+        await new UpsertCommand({
+          store,
+          set,
+          schema,
+          configs: {
+            CONFIGU_TEST: '',
+          },
+        }).run();
+      }
+
+      process.stdout.write(`Test passed for store ${this.store}`);
     } catch (error) {
-      throw new Error(`Test failed for store ${this.flags.store} of type ${store.type} with error: ${error.message}`);
+      this.context.stdio.error(`Test failed for store ${this.store} with error: ${error.message}`);
     }
   }
 }

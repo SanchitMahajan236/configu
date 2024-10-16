@@ -1,13 +1,10 @@
 {
-  "name": "@configu-integrations/comptact-json",
+  "name": "@configu-integrations/compact-json",
   "version": "0.0.0",
   "license": "Apache-2.0",
-  "description": "Configu Node.js SDK",
   "author": "@configu/dev",
-  "engines": {
-    "node": ">=v16"
-  },
   "files": [],
+  "main": "src/CompactJSON.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/configu/configu",
